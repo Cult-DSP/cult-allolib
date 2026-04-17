@@ -75,15 +75,17 @@ class Dbap : public Spatializer {
 
   /// focus is an exponent determining the amplitude focus to nearby speakers.
 
-  /// focus is (0, inf) with usable range typically [0.2, 5]. Default is 1.
-  /// A denser speaker layout my benefit from a high focus > 1, and a sparse
-  /// layout may benefit from focus < 1.
+  /// Minimum enforced value: 0.1. Usable range typically [0.2, 5]. Default is 1.
+  /// A denser speaker layout may benefit from focus > 1; a sparse layout from
+  /// focus < 1. Values below 0.1 are clamped to 0.1 — negative focus inverts
+  /// the distance weighting (far speakers louder than near), which is not a
+  /// supported operating mode.
   ///
   /// Cult DSP modification (Lucian Parisi): with L2 normalization in place,
   /// focus controls spatial sharpening only — it has no effect on total power.
   /// sum(v_k^2) = 1 is preserved for all focus values and source positions.
   /// See Lossius et al., ICMC 2009, equation (2).
-  void setFocus(float focus) { mFocus = focus; }
+  void setFocus(float focus) { mFocus = (focus >= 0.1f) ? focus : 0.1f; }
 
   void print(std::ostream& stream) override;
 
