@@ -6,7 +6,9 @@
 namespace al {
 
 Dbap::Dbap(const Speakers &sl, float focus)
-    : Spatializer(sl), mNumSpeakers(0), mFocus(focus) {
+    : Spatializer(sl),
+      mNumSpeakers(0),
+      mFocus((focus >= 0.1f) ? focus : 0.1f) {
   mNumSpeakers = mSpeakers.size();
   if (mNumSpeakers > DBAP_MAX_NUM_SPEAKERS) {
     throw std::runtime_error(
