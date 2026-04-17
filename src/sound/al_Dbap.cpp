@@ -1,10 +1,19 @@
 #include "al/sound/al_Dbap.hpp"
 
+#include <array>
+#include <stdexcept>
+
 namespace al {
 
 Dbap::Dbap(const Speakers &sl, float focus)
     : Spatializer(sl), mNumSpeakers(0), mFocus(focus) {
   mNumSpeakers = mSpeakers.size();
+  if (mNumSpeakers > DBAP_MAX_NUM_SPEAKERS) {
+    throw std::runtime_error(
+        "Dbap: speaker count " + std::to_string(mNumSpeakers) +
+        " exceeds DBAP_MAX_NUM_SPEAKERS (" +
+        std::to_string(DBAP_MAX_NUM_SPEAKERS) + ")");
+  }
   std::cout << "DBAP Compiled with " << mNumSpeakers << " speakers"
             << std::endl;
 
@@ -33,7 +42,7 @@ void Dbap::renderSample(AudioIOData &io, const Vec3f &pos, const float &sample,
   //   This matches equation (2) of Lossius et al., ICMC 2009.
 
   // Step 1: compute unnormalized weights (original per-speaker distance loop)
-  float w[DBAP_MAX_NUM_SPEAKERS];
+  std::array<float, DBAP_MAX_NUM_SPEAKERS> w;
   for (unsigned int i = 0; i < mNumSpeakers; ++i) {
     Vec3d vec = relpos - mSpeakerVecs[i];
     double dist = vec.mag();
@@ -83,7 +92,7 @@ void Dbap::renderBuffer(AudioIOData &io, const Vec3f &pos, const float *samples,
   //   This matches equation (2) of Lossius et al., ICMC 2009.
 
   // Step 1: compute unnormalized weights (original per-speaker distance loop)
-  float w[DBAP_MAX_NUM_SPEAKERS];
+  std::array<float, DBAP_MAX_NUM_SPEAKERS> w;
   for (unsigned int k = 0; k < mNumSpeakers; ++k) {
     Vec3d vec = relpos - mSpeakerVecs[k];
     double dist = vec.mag();
@@ -109,7 +118,7 @@ void Dbap::renderBuffer(AudioIOData &io, const Vec3f &pos, const float *samples,
   float kNorm = 1.0f / (maxW * sqrtf(sumSq));
 
   // Precompute final per-speaker gains outside the sample loop (Lucian Parisi)
-  float gain[DBAP_MAX_NUM_SPEAKERS];
+  std::array<float, DBAP_MAX_NUM_SPEAKERS> gain;
   for (unsigned int k = 0; k < mNumSpeakers; ++k) gain[k] = kNorm * w[k];
 
   // Step 3: apply normalized gains to output (Lucian Parisi)

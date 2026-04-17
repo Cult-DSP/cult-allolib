@@ -44,6 +44,8 @@
         Ryan McGee, 2012, ryanmichaelmcgee@gmail.com
 */
 
+#include <ostream>
+
 #include "al/math/al_Vec.hpp"
 #include "al/sound/al_Spatializer.hpp"
 #include "al/sound/al_Speaker.hpp"
@@ -52,6 +54,10 @@
 
 namespace al {
 
+// Invariant (Lucian Parisi): this DBAP implementation uses fixed-capacity
+// stack arrays sized to DBAP_MAX_NUM_SPEAKERS for speaker vectors, device
+// channels, and per-render weight/gain buffers. Speaker layouts with more
+// than DBAP_MAX_NUM_SPEAKERS speakers are rejected at construction time.
 #define DBAP_MAX_NUM_SPEAKERS 192
 
 /// Distance-based amplitude panner
