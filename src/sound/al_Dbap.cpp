@@ -40,10 +40,23 @@ void Dbap::renderSample(AudioIOData &io, const Vec3f &pos, const float &sample,
     w[i] = powf(1.f / (1.f + float(dist)), mFocus);
   }
 
-  // Step 2: L2 normalizer (Lucian Parisi)
+  // Step 2: max-scaled L2 normalization (Lucian Parisi)
+  // Weights are divided by maxW before squaring so sumSq is always in [1, N].
+  // This avoids large intermediate normalizer factors when all raw weights are
+  // very small (extreme focus + distant speakers). Guard is on maxW directly:
+  // if the loudest raw weight is negligible, output silence.
+  float maxW = 0.0f;
+  for (unsigned int i = 0; i < mNumSpeakers; ++i) {
+    if (w[i] > maxW) maxW = w[i];
+  }
+  if (maxW < 1e-6f) return;
+
   float sumSq = 0.0f;
-  for (unsigned int i = 0; i < mNumSpeakers; ++i) sumSq += w[i] * w[i];
-  float kNorm = (sumSq > 1e-12f) ? (1.0f / sqrtf(sumSq)) : 0.0f;
+  for (unsigned int i = 0; i < mNumSpeakers; ++i) {
+    float ws = w[i] / maxW;
+    sumSq += ws * ws;
+  }
+  float kNorm = 1.0f / (maxW * sqrtf(sumSq));
 
   // Step 3: apply normalized gain to output (Lucian Parisi)
   for (unsigned int i = 0; i < mNumSpeakers; ++i) {
@@ -77,16 +90,33 @@ void Dbap::renderBuffer(AudioIOData &io, const Vec3f &pos, const float *samples,
     w[k] = powf(1.0f / (1.0f + float(dist)), mFocus);
   }
 
-  // Step 2: L2 normalizer (Lucian Parisi)
-  float sumSq = 0.0f;
-  for (unsigned int k = 0; k < mNumSpeakers; ++k) sumSq += w[k] * w[k];
-  float kNorm = (sumSq > 1e-12f) ? (1.0f / sqrtf(sumSq)) : 0.0f;
+  // Step 2: max-scaled L2 normalization (Lucian Parisi)
+  // Weights are divided by maxW before squaring so sumSq is always in [1, N].
+  // This avoids large intermediate normalizer factors when all raw weights are
+  // very small (extreme focus + distant speakers). Guard is on maxW directly:
+  // if the loudest raw weight is negligible, output silence.
+  float maxW = 0.0f;
+  for (unsigned int k = 0; k < mNumSpeakers; ++k) {
+    if (w[k] > maxW) maxW = w[k];
+  }
+  if (maxW < 1e-6f) return;
 
-  // Step 3: apply normalized gain to output (Lucian Parisi)
+  float sumSq = 0.0f;
+  for (unsigned int k = 0; k < mNumSpeakers; ++k) {
+    float ws = w[k] / maxW;
+    sumSq += ws * ws;
+  }
+  float kNorm = 1.0f / (maxW * sqrtf(sumSq));
+
+  // Precompute final per-speaker gains outside the sample loop (Lucian Parisi)
+  float gain[DBAP_MAX_NUM_SPEAKERS];
+  for (unsigned int k = 0; k < mNumSpeakers; ++k) gain[k] = kNorm * w[k];
+
+  // Step 3: apply normalized gains to output (Lucian Parisi)
   for (unsigned int k = 0; k < mNumSpeakers; ++k) {
     float *out = io.outBuffer(mDeviceChannels[k]);
     for (size_t i = 0; i < numFrames; ++i) {
-      out[i] += kNorm * w[k] * samples[i];
+      out[i] += gain[k] * samples[i];
     }
   }
 }
