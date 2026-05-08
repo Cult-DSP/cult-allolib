@@ -10,6 +10,8 @@
 !external/glew/build
 **/ninja
 
+.DS_Store
+
 # only top level al folder
 /al/
 
