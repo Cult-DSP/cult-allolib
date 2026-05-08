@@ -406,11 +406,9 @@ endif()
 add_library(cult_allolib_core_alias ALIAS cult_allolib_core)
 
 if (ALLOLIB_BUILD_TESTS)
-  message("including allolib test")
-  add_subdirectory(test)
+  message(FATAL_ERROR "cult-allolib tests were removed from this lean fork. Reintroduce the test tree before enabling ALLOLIB_BUILD_TESTS/CULT_ALLOLIB_ENABLE_TESTS.")
 endif()
 
 if (ALLOLIB_BUILD_EXAMPLES)
-  message("including allolib examples")
-  add_subdirectory(examples)
+  message(FATAL_ERROR "cult-allolib examples were removed from this lean fork. Reintroduce the examples tree before enabling ALLOLIB_BUILD_EXAMPLES/CULT_ALLOLIB_ENABLE_EXAMPLES.")
 endif()
