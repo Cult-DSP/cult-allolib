@@ -250,7 +250,6 @@ if(CULT_ALLOLIB_ENABLE_PARAMETERS)
     PUBLIC
       cult_allolib_core
       cult_allolib_osc
-      serial
   )
   if(TARGET cult_allolib_file)
     target_link_libraries(cult_allolib_params PUBLIC cult_allolib_file)

@@ -57,7 +57,7 @@ if(CULT_ALLOLIB_ENABLE_MIDI)
   add_subdirectory(rtmidi)
 endif()
 
-if(CULT_ALLOLIB_ENABLE_PARAMETERS)
+if(CULT_ALLOLIB_ENABLE_PARAMETERS AND CULT_ALLOLIB_ENABLE_DOCS)
   add_subdirectory(cpptoml)
 endif()
 
@@ -141,7 +141,7 @@ if (WIN32)
   target_link_libraries(oscpack PUBLIC Ws2_32 winmm)
 endif ()
 
-if(CULT_ALLOLIB_ENABLE_SERIAL OR CULT_ALLOLIB_ENABLE_PARAMETERS)
+if(CULT_ALLOLIB_ENABLE_SERIAL)
   set(serial_src_files
     "${CMAKE_CURRENT_LIST_DIR}/serial/src/serial.cc"
     "${CMAKE_CURRENT_LIST_DIR}/serial/include/serial/serial.h"
