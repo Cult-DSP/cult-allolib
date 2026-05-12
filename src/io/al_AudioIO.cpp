@@ -46,6 +46,20 @@ bool AudioBackend::isRunning() const { return mRunning; }
 
 bool AudioBackend::error() const { return false; }
 
+std::string AudioBackend::backendName() const { return "Dummy"; }
+
+std::string AudioBackend::backendApiDisplayName() const {
+  return "Dummy audio";
+}
+
+double AudioBackend::streamSampleRate() const { return 0.0; }
+
+std::string AudioBackend::compiledBackendName() { return "Dummy"; }
+
+std::string AudioBackend::defaultBackendApiDisplayName() {
+  return "Dummy audio";
+}
+
 void AudioBackend::printError(const char *text) const {
   if (error()) {
     fprintf(stderr, "%s: Dummy error.\n", text);
@@ -164,6 +178,26 @@ bool AudioBackend::isRunning() const { return mRunning; }
 bool AudioBackend::error() const {
   return static_cast<AudioBackendData *>(mBackendData.get())->mErrNum !=
          paNoError;
+}
+
+std::string AudioBackend::backendName() const { return "PortAudio"; }
+
+std::string AudioBackend::backendApiDisplayName() const {
+  return "PortAudio API unknown";
+}
+
+double AudioBackend::streamSampleRate() const {
+  if (!mOpen)
+    return 0.0;
+  const PaStreamInfo *info = Pa_GetStreamInfo(
+      static_cast<AudioBackendData *>(mBackendData.get())->mStream);
+  return info ? info->sampleRate : 0.0;
+}
+
+std::string AudioBackend::compiledBackendName() { return "PortAudio"; }
+
+std::string AudioBackend::defaultBackendApiDisplayName() {
+  return "PortAudio API unknown";
 }
 
 void AudioBackend::printError(const char *text) const {
@@ -510,6 +544,45 @@ bool AudioBackend::isRunning() const {
 }
 
 bool AudioBackend::error() const { return false; }
+
+std::string AudioBackend::backendName() const { return "RtAudio"; }
+
+std::string AudioBackend::backendApiDisplayName() const {
+  AudioBackendData *data = static_cast<AudioBackendData *>(mBackendData.get());
+  try {
+    RtAudio::Api api = data->audio.getCurrentApi();
+    if (api == RtAudio::UNSPECIFIED)
+      return "RtAudio API unknown";
+    return RtAudio::getApiDisplayName(api);
+  } catch (RtAudioError &) {
+    return "RtAudio API unknown";
+  }
+}
+
+double AudioBackend::streamSampleRate() const {
+  AudioBackendData *data = static_cast<AudioBackendData *>(mBackendData.get());
+  try {
+    if (!data->audio.isStreamOpen())
+      return 0.0;
+    return static_cast<double>(data->audio.getStreamSampleRate());
+  } catch (RtAudioError &) {
+    return 0.0;
+  }
+}
+
+std::string AudioBackend::compiledBackendName() { return "RtAudio"; }
+
+std::string AudioBackend::defaultBackendApiDisplayName() {
+  try {
+    RtAudio audio;
+    RtAudio::Api api = audio.getCurrentApi();
+    if (api == RtAudio::UNSPECIFIED)
+      return "RtAudio API unknown";
+    return RtAudio::getApiDisplayName(api);
+  } catch (RtAudioError &) {
+    return "RtAudio API unknown";
+  }
+}
 
 void AudioBackend::printError(const char *text) const {
   //    if(error()){
@@ -1207,6 +1280,17 @@ bool AudioIO::start() {
 bool AudioIO::stop() { return mBackend->stop(); }
 
 bool AudioIO::supportsFPS(double fps) { return mBackend->supportsFPS(fps); }
+std::string AudioIO::backendName() const { return mBackend->backendName(); }
+std::string AudioIO::backendApiDisplayName() const {
+  return mBackend->backendApiDisplayName();
+}
+double AudioIO::streamSampleRate() const { return mBackend->streamSampleRate(); }
+std::string AudioIO::compiledBackendName() {
+  return AudioBackend::compiledBackendName();
+}
+std::string AudioIO::defaultBackendApiDisplayName() {
+  return AudioBackend::defaultBackendApiDisplayName();
+}
 
 void AudioIO::print() const {
   if (mInDevice.id() == mOutDevice.id()) {

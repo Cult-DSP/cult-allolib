@@ -76,6 +76,13 @@ public:
 
   bool supportsFPS(double fps);
 
+  std::string backendName() const;
+  std::string backendApiDisplayName() const;
+  double streamSampleRate() const;
+
+  static std::string compiledBackendName();
+  static std::string defaultBackendApiDisplayName();
+
   void inDevice(int index);
   void outDevice(int index);
 
@@ -212,6 +219,11 @@ public:
   double cpu() const; ///< Returns current CPU usage of audio thread
   bool
   supportsFPS(double fps); ///< Return true if fps supported, otherwise false
+  std::string backendName() const;
+  std::string backendApiDisplayName() const;
+  double streamSampleRate() const;
+  static std::string compiledBackendName();
+  static std::string defaultBackendApiDisplayName();
   bool zeroNANs()
       const; ///< Returns whether to zero NANs in output buffer going to DAC
 
