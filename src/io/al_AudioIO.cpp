@@ -54,6 +54,12 @@ std::string AudioBackend::backendApiDisplayName() const {
 
 double AudioBackend::streamSampleRate() const { return 0.0; }
 
+int AudioBackend::outDeviceIndex() const { return 0; }
+
+std::string AudioBackend::lastErrorMessage() const {
+  return mLastErrorMessage;
+}
+
 std::string AudioBackend::compiledBackendName() { return "Dummy"; }
 
 std::string AudioBackend::defaultBackendApiDisplayName() {
@@ -100,6 +106,7 @@ double AudioBackend::time() { return 0.0; }
 
 bool AudioBackend::open(int framesPerSecond, unsigned int framesPerBuffer,
                         void *userdata) {
+  mLastErrorMessage.clear();
   mOpen = true;
   return true;
 }
@@ -111,6 +118,7 @@ bool AudioBackend::close() {
 
 bool AudioBackend::start(int framesPerSecond, int framesPerBuffer,
                          void *userdata) {
+  mLastErrorMessage.clear();
   mRunning = true;
   return true;
 }
@@ -192,6 +200,16 @@ double AudioBackend::streamSampleRate() const {
   const PaStreamInfo *info = Pa_GetStreamInfo(
       static_cast<AudioBackendData *>(mBackendData.get())->mStream);
   return info ? info->sampleRate : 0.0;
+}
+
+int AudioBackend::outDeviceIndex() const {
+  const AudioBackendData *data =
+      static_cast<const AudioBackendData *>(mBackendData.get());
+  return data ? static_cast<int>(data->mOutParams.device) : -1;
+}
+
+std::string AudioBackend::lastErrorMessage() const {
+  return mLastErrorMessage;
 }
 
 std::string AudioBackend::compiledBackendName() { return "PortAudio"; }
@@ -332,6 +350,7 @@ bool AudioBackend::open(int framesPerSecond, unsinged int framesPerBuffer,
                         void *userdata) {
   assert(framesPerBuffer != 0 && framesPerSecond != 0 && userdata != NULL);
   AudioBackendData *data = static_cast<AudioBackendData *>(mBackendData.get());
+  mLastErrorMessage.clear();
 
   data->mErrNum = paNoError;
 
@@ -359,6 +378,9 @@ bool AudioBackend::open(int framesPerSecond, unsinged int framesPerBuffer,
     mOpen = paNoError == data->mErrNum;
   }
 
+  if (paNoError != data->mErrNum) {
+    mLastErrorMessage = Pa_GetErrorText(data->mErrNum);
+  }
   printError("Error in al::AudioIO::open()");
   return paNoError == data->mErrNum;
 }
@@ -378,6 +400,7 @@ bool AudioBackend::close() {
 bool AudioBackend::start(int framesPerSecond, int framesPerBuffer,
                          void *userdata) {
   AudioBackendData *data = static_cast<AudioBackendData *>(mBackendData.get());
+  mLastErrorMessage.clear();
   data->mErrNum = paNoError;
   if (!isOpen()) {
     open(framesPerSecond, framesPerBuffer, userdata);
@@ -386,18 +409,25 @@ bool AudioBackend::start(int framesPerSecond, int framesPerBuffer,
     data->mErrNum = Pa_StartStream(data->mStream);
   if (paNoError == data->mErrNum)
     mRunning = true;
+  if (paNoError != data->mErrNum) {
+    mLastErrorMessage = Pa_GetErrorText(data->mErrNum);
+  }
   printError("Error in AudioIO::start()");
   return paNoError == data->mErrNum;
 }
 
 bool AudioBackend::stop() {
   AudioBackendData *data = static_cast<AudioBackendData *>(mBackendData.get());
+  mLastErrorMessage.clear();
   data->mErrNum = paNoError;
   if (mRunning) {
     data->mErrNum = Pa_StopStream(data->mStream);
   }
   if (paNoError == data->mErrNum)
     mRunning = false;
+  if (paNoError != data->mErrNum) {
+    mLastErrorMessage = Pa_GetErrorText(data->mErrNum);
+  }
   return paNoError == data->mErrNum;
 }
 
@@ -570,6 +600,16 @@ double AudioBackend::streamSampleRate() const {
   }
 }
 
+int AudioBackend::outDeviceIndex() const {
+  const AudioBackendData *data =
+      static_cast<const AudioBackendData *>(mBackendData.get());
+  return data ? static_cast<int>(data->oParams.deviceId) : -1;
+}
+
+std::string AudioBackend::lastErrorMessage() const {
+  return mLastErrorMessage;
+}
+
 std::string AudioBackend::compiledBackendName() { return "RtAudio"; }
 
 std::string AudioBackend::defaultBackendApiDisplayName() {
@@ -684,6 +724,7 @@ bool AudioBackend::open(int framesPerSecond, unsigned int framesPerBuffer,
   //    unsigned int bufferBytes, bufferFrames = 512;
 
   AudioBackendData *data = static_cast<AudioBackendData *>(mBackendData.get());
+  mLastErrorMessage.clear();
   unsigned int deviceBufferSize = static_cast<unsigned int>(framesPerBuffer);
   auto *ip = data->iParams.nChannels > 0 ? &data->iParams : nullptr;
   auto *op = data->oParams.nChannels > 0 ? &data->oParams : nullptr;
@@ -692,6 +733,7 @@ bool AudioBackend::open(int framesPerSecond, unsigned int framesPerBuffer,
                            &deviceBufferSize, rtaudioCallback, userdata,
                            &data->options);
   } catch (RtAudioError &e) {
+    mLastErrorMessage = e.getMessage();
     e.printMessage();
     return false;
   }
@@ -723,9 +765,11 @@ bool AudioBackend::close() {
 bool AudioBackend::start(int framesPerSecond, int framesPerBuffer,
                          void *userdata) {
   AudioBackendData *data = static_cast<AudioBackendData *>(mBackendData.get());
+  mLastErrorMessage.clear();
   try {
     data->audio.startStream();
   } catch (RtAudioError &e) {
+    mLastErrorMessage = e.getMessage();
     e.printMessage();
     //          goto cleanup;
     return false;
@@ -735,11 +779,13 @@ bool AudioBackend::start(int framesPerSecond, int framesPerBuffer,
 
 bool AudioBackend::stop() {
   AudioBackendData *data = static_cast<AudioBackendData *>(mBackendData.get());
+  mLastErrorMessage.clear();
   try {
     if (data->audio.isStreamRunning()) {
       data->audio.stopStream();
     }
   } catch (RtAudioError &e) {
+    mLastErrorMessage = e.getMessage();
     e.printMessage();
     return false;
   }
@@ -1228,6 +1274,12 @@ void AudioIO::channels(int num, bool forOutput) {
 int AudioIO::channelsInDevice() const { return (int)mBackend->inDeviceChans(); }
 int AudioIO::channelsOutDevice() const {
   return (int)mBackend->outDeviceChans();
+}
+
+int AudioIO::outputDeviceId() const { return mBackend->outDeviceIndex(); }
+
+std::string AudioIO::lastErrorMessage() const {
+  return mBackend->lastErrorMessage();
 }
 
 bool AudioIO::close() {

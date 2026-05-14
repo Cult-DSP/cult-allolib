@@ -79,6 +79,8 @@ public:
   std::string backendName() const;
   std::string backendApiDisplayName() const;
   double streamSampleRate() const;
+  int outDeviceIndex() const;
+  std::string lastErrorMessage() const;
 
   static std::string compiledBackendName();
   static std::string defaultBackendApiDisplayName();
@@ -116,6 +118,7 @@ public:
 protected:
   bool mRunning{false};
   bool mOpen{false};
+  std::string mLastErrorMessage;
   std::shared_ptr<void> mBackendData;
 };
 
@@ -222,6 +225,8 @@ public:
   std::string backendName() const;
   std::string backendApiDisplayName() const;
   double streamSampleRate() const;
+  int outputDeviceId() const;
+  std::string lastErrorMessage() const;
   static std::string compiledBackendName();
   static std::string defaultBackendApiDisplayName();
   bool zeroNANs()
